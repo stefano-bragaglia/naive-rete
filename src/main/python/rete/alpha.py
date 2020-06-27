@@ -1,6 +1,30 @@
 from rete.common import FIELDS
 
 
+# done
+class AlphaMemory:
+
+    def __init__(self, items=None, successors=None):
+        """
+        :type successors: list of BetaNode
+        :type items: list of rete.WME
+        """
+        self.items = items if items else []
+        self.successors = successors if successors else []
+
+    def activation(self, wme):
+        """
+        :type wme: rete.WME
+        """
+        if wme in self.items:
+            return
+        self.items.append(wme)
+        wme.amems.append(self)
+        for child in reversed(self.successors):
+            child.right_activation(wme)
+
+
+# TODO
 class ConstantTestNode:
 
     def __init__(self, field_to_test, field_must_equal=None, amem=None, children=None):
@@ -66,25 +90,3 @@ class ConstantTestNode:
         new_node = ConstantTestNode(field, symbol, children=[])
         parent.children.append(new_node)
         return new_node
-
-
-class AlphaMemory:
-
-    def __init__(self, items=None, successors=None):
-        """
-        :type successors: list of BetaNode
-        :type items: list of rete.WME
-        """
-        self.items = items if items else []
-        self.successors = successors if successors else []
-
-    def activation(self, wme):
-        """
-        :type wme: rete.WME
-        """
-        if wme in self.items:
-            return
-        self.items.append(wme)
-        wme.amems.append(self)
-        for child in reversed(self.successors):
-            child.right_activation(wme)

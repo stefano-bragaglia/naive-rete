@@ -1,16 +1,9 @@
 # -*- coding: utf-8 -*-
+from typing import Any
+
+from rete.utils import is_var
 
 FIELDS = ['identifier', 'attribute', 'value']
-
-
-class BetaNode(object):
-
-    def __init__(self, children=None, parent=None):
-        self.children = children if children else []
-        self.parent = parent
-
-    def dump(self):
-        return "%s %s" % (self.__class__.__name__, id(self))
 
 
 class Has:
@@ -105,13 +98,23 @@ class Filter:
 
 
 class Bind:
-    def __init__(self, tmp, to):
+    def __init__(self, tmp: str, to: str) -> None:
         self.tmpl = tmp
         self.to = to
 
-    def __eq__(self, other):
-        return isinstance(other, Bind) and \
-               self.tmpl == other.tmpl and self.to == other.to
+    def __eq__(self, other: Any) -> bool:
+        """ Check this and the other object are the same.
+
+        :param other: the other object to compare
+        :return: `True` if this and the other object are the same, `False` otherwise
+        """
+        if not isinstance(other, Bind):
+            return False
+
+        if self is other:
+            return True
+
+        return (self.tmpl, self.to) == (other.tmpl, other.to)
 
 
 class WME:
@@ -134,8 +137,8 @@ class WME:
         if not isinstance(other, WME):
             return False
         return self.identifier == other.identifier and \
-            self.attribute == other.attribute and \
-            self.value == other.value
+               self.attribute == other.attribute and \
+               self.value == other.value
 
 
 class Token:
@@ -174,7 +177,7 @@ class Token:
     def wmes(self):
         ret = [self.wme]
         t = self
-        while not t.parent.is_root():
+        while t.parent and not t.parent.is_root():
             t = t.parent
             ret.insert(0, t.wme)
         return ret
@@ -201,8 +204,9 @@ class Token:
         """
         :type token: Token
         """
-        from rete.negative_node import NegativeNode
-        from rete.ncc_node import NccPartnerNode, NccNode
+        from rete.beta import NegativeNode
+        from rete.beta import NccPartnerNode
+        from rete.beta import NccNode
 
         for child in token.children:
             cls.delete_token_and_descendents(child)
@@ -224,7 +228,3 @@ class Token:
             if not token.owner.ncc_results:
                 for child in token.node.ncc_node.children:
                     child.left_activation(token.owner, None)
-
-
-def is_var(v):
-    return v.startswith('$')

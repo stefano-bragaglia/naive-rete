@@ -1,16 +1,25 @@
-# -*- coding: utf-8 -*-
+import io
 
-import cStringIO
-
-from rete import BindNode
-from rete.filter_node import FilterNode
-from rete.ncc_node import NccNode, NccPartnerNode
-from rete.negative_node import NegativeNode
-from rete import AlphaMemory, ConstantTestNode
-from rete import JoinNode, TestAtJoinNode
-from rete.pnode import PNode
-from rete.common import Token, BetaNode, FIELDS, Has, Neg, Ncc, is_var, Filter, Bind
-from rete.beta_memory_node import BetaMemory
+from rete import Bind
+from rete import Filter
+from rete import Has
+from rete import Ncc
+from rete import Neg
+from rete.alpha import AlphaMemory
+from rete.alpha import ConstantTestNode
+from rete.beta import BetaMemory
+from rete.beta import BindNode
+from rete.beta import BetaNode
+from rete.common import FIELDS
+from rete.utils import is_var
+from rete.common import Token
+from rete.beta import FilterNode
+from rete.beta import JoinNode
+from rete.join_node import TestAtJoinNode
+from rete.beta import NccNode
+from rete.beta import NccPartnerNode
+from rete.beta import NegativeNode
+from rete.beta import PNode
 
 
 class Network:
@@ -50,7 +59,7 @@ class Network:
                     child.left_activation(jr.owner, None)
 
     def dump(self):
-        self.buf = cStringIO.StringIO()
+        self.buf = io.StringIO()
         self.buf.write('digraph {\n')
         self.dump_beta(self.beta_root)
         self.dump_alpha(self.alpha_root)
