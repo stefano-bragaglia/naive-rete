@@ -30,7 +30,7 @@ class TestIntegration(TestCase):
                 production = network.add_production(rule)
                 for wme in wmes:
                     network.add_wme(wme)
-                result = len(production.items)
+                result = len(production.memory)
 
                 assert_that(result, 'case 0').is_equal_to(exp)
 
@@ -60,10 +60,10 @@ class TestIntegration(TestCase):
                 am1 = network.build_or_share_alpha_memory(rule[1])
                 am2 = network.build_or_share_alpha_memory(rule[2])
 
-                dummy_join = am0.successors[0]
+                dummy_join = am0.children[0]
 
-                join_on_value_y = am1.successors[0]
-                join_on_value_z = am2.successors[0]
+                join_on_value_y = am1.children[0]
+                join_on_value_z = am2.children[0]
 
                 match_c0 = dummy_join.children[0]
                 match_c0c1 = join_on_value_y.children[0]
@@ -72,23 +72,23 @@ class TestIntegration(TestCase):
                 for wme in wmes:
                     network.add_wme(wme)
 
-                assert am0.items == [wmes[0], wmes[1], wmes[3], wmes[7]]
-                assert am1.items == [wmes[4], wmes[6]]
-                assert am2.items == [wmes[2], wmes[8]]
-                assert len(match_c0.items) == 4
-                assert len(match_c0c1.items) == 2
-                assert len(match_c0c1c2.items) == 1
+                assert am0.memory == [wmes[0], wmes[1], wmes[3], wmes[7]]
+                assert am1.memory == [wmes[4], wmes[6]]
+                assert am2.memory == [wmes[2], wmes[8]]
+                assert len(match_c0.memory) == 4
+                assert len(match_c0c1.memory) == 2
+                assert len(match_c0c1c2.memory) == 1
 
                 t0 = Token(Token(None, None), wmes[0])
                 t1 = Token(t0, wmes[4])
                 t2 = Token(t1, wmes[8])
-                assert match_c0c1c2.items[0] == t2
+                assert match_c0c1c2.memory[0] == t2
 
                 network.remove_wme(wmes[0])
-                assert am0.items == [wmes[1], wmes[3], wmes[7]]
-                assert len(match_c0.items) == 3
-                assert len(match_c0c1.items) == 1
-                assert len(match_c0c1c2.items) == 0
+                assert am0.memory == [wmes[1], wmes[3], wmes[7]]
+                assert len(match_c0.memory) == 3
+                assert len(match_c0c1.memory) == 1
+                assert len(match_c0c1c2.memory) == 0
 
     def test_dup(self):
         # setup
@@ -107,10 +107,10 @@ class TestIntegration(TestCase):
         # end
 
         am = net.build_or_share_alpha_memory(c2)
-        join_on_value_y = am.successors[1]
+        join_on_value_y = am.children[1]
         match_for_all = join_on_value_y.children[0]
 
-        assert len(match_for_all.items) == 1
+        assert len(match_for_all.memory) == 1
 
     def test_negative_condition(self):
         # setup
@@ -134,7 +134,7 @@ class TestIntegration(TestCase):
         ]
         for wme in wmes:
             net.add_wme(wme)
-        assert p0.items[0].wmes == [
+        assert p0.memory[0].wmes == [
             WME('B1', 'on', 'B3'),
             WME('B3', 'left-of', 'B4'),
             None
@@ -168,15 +168,15 @@ class TestIntegration(TestCase):
         # add product on the fly
         p2 = net.add_production(Rule(c0, c1, c3, c2))
 
-        assert len(p0.items) == 1
-        assert len(p1.items) == 1
-        assert len(p2.items) == 1
-        assert p0.items[0].wmes == [wmes[0], wmes[4], wmes[8]]
-        assert p1.items[0].wmes == [wmes[0], wmes[4], wmes[7], wmes[6]]
-        assert p2.items[0].wmes == [wmes[0], wmes[4], wmes[7], wmes[8]]
+        assert len(p0.memory) == 1
+        assert len(p1.memory) == 1
+        assert len(p2.memory) == 1
+        assert p0.memory[0].wmes == [wmes[0], wmes[4], wmes[8]]
+        assert p1.memory[0].wmes == [wmes[0], wmes[4], wmes[7], wmes[6]]
+        assert p2.memory[0].wmes == [wmes[0], wmes[4], wmes[7], wmes[8]]
 
         net.remove_production(p2)
-        assert len(p2.items) == 0
+        assert len(p2.memory) == 0
 
     def test_ncc(self):
         net = Network()
@@ -198,9 +198,9 @@ class TestIntegration(TestCase):
         ]
         for wme in wmes:
             net.add_wme(wme)
-        assert len(p0.items) == 2
+        assert len(p0.memory) == 2
         net.add_wme(WME('B3', 'color', 'red'))
-        assert len(p0.items) == 1
+        assert len(p0.memory) == 1
 
     def test_black_white(self):
         net = Network()
@@ -224,5 +224,5 @@ class TestIntegration(TestCase):
         for wme in wmes:
             net.add_wme(wme)
 
-        assert len(p0.items) == 1
-        assert p0.items[0].get_binding('$item') == 'item:1'
+        assert len(p0.memory) == 1
+        assert p0.memory[0].get_binding('$item') == 'item:1'

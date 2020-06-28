@@ -1,7 +1,9 @@
 from unittest import TestCase
 
-from rete.alpha import ConstantTestNode
+from assertpy import assert_that
+
 from rete.common import WME
+from rete.nodes import ConstantTestNode
 
 
 class TestConstantTestNode(TestCase):
@@ -32,8 +34,8 @@ class TestConstantTestNode(TestCase):
         root = ConstantTestNode('no-test')
         path = [('attribute', 'on')]
         ConstantTestNode.build_or_share_alpha_memory(root, path)
-        assert root.children[0].field_to_test == 'attribute'
-        assert root.children[0].field_must_equal == 'on'
+        assert root.children[0].field == 'attribute'
+        assert root.children[0].symbol == 'on'
         assert len(path) == 0
 
     def test_level2(self):
@@ -41,8 +43,8 @@ class TestConstantTestNode(TestCase):
         root = ConstantTestNode('no-test')
         path = [('attribute', 'on'), ('value', 'table')]
         ConstantTestNode.build_or_share_alpha_memory(root, path)
-        assert root.children[0].field_to_test == 'attribute'
-        assert root.children[0].children[0].field_to_test == 'value'
+        assert root.children[0].field == 'attribute'
+        assert root.children[0].children[0].field == 'value'
 
         path = [('attribute', 'color'), ('value', 'red')]
         ConstantTestNode.build_or_share_alpha_memory(root, path)
@@ -56,8 +58,8 @@ class TestConstantTestNode(TestCase):
         am2 = ConstantTestNode.build_or_share_alpha_memory(root, [('attribute', 'on'), ('value', 'table')])
 
         root.activation(WME('x', 'on', 'table'))
-        assert len(am1.items) == 1
-        assert len(am2.items) == 1
+        assert_that(len(am1.memory), 'add_wme').is_equal_to(1)
+        assert_that(len(am2.memory), 'add_wme').is_equal_to(1)
 
 # class TestAlphaMemory(TestCase):
 #     def test_activation(self):

@@ -5,21 +5,21 @@ from rete import Filter
 from rete import Has
 from rete import Ncc
 from rete import Neg
-from rete.alpha import AlphaMemory
-from rete.alpha import ConstantTestNode
-from rete.beta import BetaMemory
-from rete.beta import BindNode
-from rete.beta import BetaNode
 from rete.common import FIELDS
-from rete.utils import is_var
+from rete.common import JoinNodeTest
 from rete.common import Token
-from rete.beta import FilterNode
-from rete.beta import JoinNode
-from rete.join_node import TestAtJoinNode
-from rete.beta import NccNode
-from rete.beta import NccPartnerNode
-from rete.beta import NegativeNode
-from rete.beta import PNode
+from rete.nodes import AlphaMemory
+from rete.nodes import BetaMemory
+from rete.nodes import BetaNode
+from rete.nodes import BindNode
+from rete.nodes import ConstantTestNode
+from rete.nodes import FilterNode
+from rete.nodes import JoinNode
+from rete.nodes import NccNode
+from rete.nodes import NccPartnerNode
+from rete.nodes import NegativeNode
+from rete.nodes import ProductionNode
+from rete.utils import is_var
 
 
 class Network:
@@ -49,10 +49,10 @@ class Network:
         :type wme: WME
         """
         for am in wme.amems:
-            am.items.remove(wme)
+            am.memory.remove(wme)
         for t in wme.tokens:
-            Token.delete_token_and_descendents(t)
-        for jr in wme.negative_join_result:
+            Token.delete_token_and_descendants(t)
+        for jr in wme.negative_join_results:
             jr.owner.join_results.remove(jr)
             if not jr.owner.join_results:
                 for child in jr.owner.node.children:
@@ -85,7 +85,7 @@ class Network:
         :type node: ConstantTestNode
         """
         if node.amem:
-            for child in node.amem.successors:
+            for child in node.amem.children:
                 self.buf.write('    "%s" -> "%s";\n' % (node.dump(), child.dump()))
         for child in node.children:
             self.dump_alpha2beta(child)
@@ -116,8 +116,8 @@ class Network:
             if not is_var(v):
                 path.append((f, v))
         am = ConstantTestNode.build_or_share_alpha_memory(self.alpha_root, path)
-        for w in self.alpha_root.amem.items:
-            if condition.test(w):
+        for w in self.alpha_root.amem.memory:
+            if condition.match(w):
                 am.activation(w)
         return am
 
@@ -126,7 +126,7 @@ class Network:
         """
         :type c: Has
         :type earlier_conds: Rule
-        :rtype: list of TestAtJoinNode
+        :rtype: list of JoinNodeTest
         """
         result = []
         for field_of_v, v in c.vars:
@@ -136,7 +136,7 @@ class Network:
                 field_of_v2 = cond.contain(v)
                 if not field_of_v2:
                     continue
-                t = TestAtJoinNode(field_of_v, idx, field_of_v2)
+                t = JoinNodeTest(field_of_v, idx, field_of_v2)
                 result.append(t)
         return result
 
@@ -146,16 +146,17 @@ class Network:
         :type has: Has
         :type parent: BetaNode
         :type amem: AlphaMemory
-        :type tests: list of TestAtJoinNode
+        :type tests: list of JoinNodeTest
         :rtype: JoinNode
         """
         for child in parent.children:
-            if isinstance(child, JoinNode) and child.amem == amem \
-                    and child.tests == tests and child.has == has:
+            if isinstance(child, JoinNode) and child.amem == amem and child.tests == tests and child.has == has:
                 return child
+
         node = JoinNode([], parent, amem, tests, has)
-        parent.children.append(node)
-        amem.successors.append(node)
+        parent.append_child(node)
+        amem.append_child(node)
+
         return node
 
     @classmethod
@@ -163,15 +164,17 @@ class Network:
         """
         :type parent: BetaNode
         :type amem: AlphaMemory
-        :type tests: list of TestAtJoinNode
+        :type tests: list of JoinNodeTest
         :rtype: JoinNode
         """
         for child in parent.children:
             if isinstance(child, NegativeNode) and child.amem == amem and child.tests == tests:
                 return child
+
         node = NegativeNode(parent=parent, amem=amem, tests=tests)
-        parent.children.append(node)
-        amem.successors.append(node)
+        parent.append_child(node)
+        amem.append_child(node)
+
         return node
 
     def build_or_share_beta_memory(self, parent):
@@ -185,8 +188,8 @@ class Network:
         node = BetaMemory(None, parent)
         # dummy top beta memory
         if parent == self.beta_root:
-            node.items.append(Token(None, None))
-        parent.children.append(node)
+            node.append_token(Token(None, None))
+        parent.append_child(node)
         self.update_new_node_with_matches_from_above(node)
         return node
 
@@ -194,13 +197,13 @@ class Network:
         """
         :type kwargs:
         :type parent: BetaNode
-        :rtype: PNode
+        :rtype: ProductionNode
         """
         for child in parent.children:
-            if isinstance(child, PNode):
+            if isinstance(child, ProductionNode):
                 return child
-        node = PNode(None, parent, **kwargs)
-        parent.children.append(node)
+        node = ProductionNode(None, parent, **kwargs)
+        parent.append_child(node)
         self.update_new_node_with_matches_from_above(node)
         return node
 
@@ -216,8 +219,8 @@ class Network:
                 return child
         ncc_node = NccNode([], parent)
         ncc_partner = NccPartnerNode([], bottom_of_subnetwork)
-        parent.children.append(ncc_node)
-        bottom_of_subnetwork.children.append(ncc_partner)
+        parent.add_child(ncc_node)
+        bottom_of_subnetwork.add_child(ncc_partner)
         ncc_node.partner = ncc_partner
         ncc_partner.ncc_node = ncc_node
         ncc_partner.number_of_conditions = ncc.number_of_conditions
@@ -231,10 +234,10 @@ class Network:
         :type parent: BetaNode
         """
         for child in parent.children:
-            if isinstance(child, FilterNode) and child.tmpl == f.tmpl:
+            if isinstance(child, FilterNode) and child.template == f.template:
                 return child
-        node = FilterNode([], parent, f.tmpl)
-        parent.children.append(node)
+        node = FilterNode([], parent, f.template)
+        parent.add_child(node)
         return node
 
     def build_or_share_bind_node(self, parent, b):
@@ -243,11 +246,11 @@ class Network:
         :type parent: BetaNode
         """
         for child in parent.children:
-            if isinstance(child, BindNode) and child.tmpl == b.tmpl \
-                    and child.bind == b.to:
+            if isinstance(child, BindNode) and child.template == b.template \
+                    and child.bind == b.symbol:
                 return child
-        node = BindNode([], parent, b.tmpl, b.to)
-        parent.children.append(node)
+        node = BindNode([], parent, b.template, b.symbol)
+        parent.append_child(node)
         return node
 
     def build_or_share_network_for_conditions(self, parent, rule, earlier_conds):
@@ -284,20 +287,28 @@ class Network:
         """
         parent = new_node.parent
         if isinstance(parent, BetaMemory):
-            for tok in parent.items:
+            for tok in parent.memory:
                 new_node.left_activation(tok, None)
+
         elif isinstance(parent, JoinNode):
-            saved_list_of_children = parent.children
-            parent.children = [new_node]
-            for item in parent.amem.items:
+            saved_list_of_children = parent.replace_children(new_node)
+            for item in parent.amem.memory:
                 parent.right_activation(item)
-            parent.children = saved_list_of_children
+            parent.replace_children(*saved_list_of_children)
+
+            # saved_list_of_children = parent.children
+            # parent.children = [new_node]
+            # for item in parent.amem.memory:
+            #     parent.right_activation(item)
+            # parent.children = saved_list_of_children
+
         elif isinstance(parent, NegativeNode):
-            for token in parent.items:
+            for token in parent.memory:
                 if not token.join_results:
                     new_node.left_activation(token, None)
+
         elif isinstance(parent, NccNode):
-            for token in parent.items:
+            for token in parent.memory:
                 if not token.ncc_results:
                     new_node.left_activation(token, None)
 
@@ -307,10 +318,10 @@ class Network:
         :type node: BetaNode
         """
         if isinstance(node, JoinNode):
-            node.amem.successors.remove(node)
+            node.amem.remove_child(node)
         else:
-            for item in node.items:
-                Token.delete_token_and_descendents(item)
-        node.parent.children.remove(node)
+            for item in node.memory:
+                Token.delete_token_and_descendants(item)
+        node.parent.remove_child(node)
         if not node.parent.children:
             cls.delete_node_and_any_unused_ancestors(node.parent)

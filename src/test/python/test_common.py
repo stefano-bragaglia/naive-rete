@@ -29,7 +29,7 @@ class TestHas(TestCase):
             (Has('$a', '$b', '$c'), '$a', 'identifier'),
             (Has('$a', '$b', '$c'), '$b', 'attribute'),
             (Has('$a', '$b', '$c'), '$c', 'value'),
-            (Has('$a', '$b', '$c'), '$d', ''),
+            (Has('$a', '$b', '$c'), '$d', None),
         ]):
             with self.subTest(i=i, cond=cond, var=var, exp=exp):
                 result = cond.contain(var)
@@ -42,7 +42,7 @@ class TestHas(TestCase):
             (Has('$x', 'color', 'red'), WME('B1', 'color', 'blue'), False),
         ]):
             with self.subTest(i=i, cond=cond, obj=obj, exp=exp):
-                result = cond.test(obj)
+                result = cond.match(obj)
 
                 assert_that(result, 'test').is_equal_to(exp)
 
@@ -102,9 +102,9 @@ class TestFilter(TestCase):
                 for wme in wmes:
                     network.add_wme(wme)
 
-                assert_that(production.items, 'filter').is_length(exp_len)
-                if production.items:
-                    token = production.items[0]
+                assert_that(production.memory, 'filter').is_length(exp_len)
+                if production.memory:
+                    token = production.memory[0]
                     assert_that(token.get_binding(var), 'filter').is_equal_to(exp_val)
 
 
@@ -122,7 +122,7 @@ class TestBind(TestCase):
                 for wme in wmes:
                     network.add_wme(wme)
 
-                assert_that(production.items, 'filter').is_length(exp_len)
-                if production.items:
-                    token = production.items[0]
+                assert_that(production.memory, 'filter').is_length(exp_len)
+                if production.memory:
+                    token = production.memory[0]
                     assert_that(token.get_binding(var), 'filter').is_equal_to(exp_val)

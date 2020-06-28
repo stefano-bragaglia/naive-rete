@@ -8,8 +8,8 @@ from rete import Filter
 from rete import Has
 from rete import Ncc
 from rete import Rule
+from rete.common import parse_xml
 from rete.utils import is_var
-from rete.utils import parse_xml
 
 FIXTURES = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fixtures'))
 
